@@ -5,34 +5,43 @@
 #include <math.h>
 #include <time.h>
 
-#define INPUT_NEURONS 784
-#define HIDDEN_NEURONS 20
-#define OUTPUT_NEURONS 10
-#define LEARNING_RATE 0.01
-#define EPOCHS 20000
+#define INPUTS 784
+#define HIDDEN 16
+#define OUTPUTS 10
+#define LEARNING_RATE 0.1
+#define EPOCHS 500
+#define SAMPLES 60000
+#define TOTAL_IMAGES 60000
 
-typedef struct {
-    double* input;
-    double* hidden;
-    double* output;
-    double** weights_ih;
-    double** weights_ho;
-    double* bias_h;
-    double* bias_o;
-} NeuralNetwork;
 
-double reLU(double x);
-double xavier_weight(int n_in, int n_out);
-double random_weight();
-double sigmoid(double x);
-double sigmoid_derivative(double x);
-void initialize_network(NeuralNetwork* neuralnetwork);
+typedef struct NeuralNetwork {
+        double* inputs;
+        double* hidden;
+        double* output;
+        double* bias_1;
+        double* bias_2;
+        double** weights_1;
+        double** weights_2;
+        double* dZ1;
+        double* dZ2;
+        double** dW1;
+        double** dW2;
+        double* db1;
+        double* db2;
+}NeuralNetwork;
+
+double random_weights();
+double reLu(double x);
+double relu_derivative(double x);
+void softmax(NeuralNetwork* nn);
+void initialize_neuralnetwork(NeuralNetwork* nn);
 void forward_propagation(NeuralNetwork* nn);
-void train(NeuralNetwork *nn, double** inputs, double targets[], int samples);
-int predict(NeuralNetwork* nn, double* input);
-double categorical_cross_entropy_loss(int target_class, double output_neurons[], int num_output_neurons);
-void softmax(double* x, int n);
-double reLU_derivative(double x);
-void freeNeuralNetwork(NeuralNetwork* nn);
-void backpropagation(NeuralNetwork *nn, int target);
-double mean_squared_error_loss(int target_class, double output_neurons[], int num_output_neurons);
+void back_propagation(NeuralNetwork* nn, int* Y, int i);
+void update_params(NeuralNetwork* nn);
+int* get_predictions(double* A2, int outputs, int samples);
+double get_accuracy(int* predictions, int* Y, int samples) ;
+void gradient_descent(NeuralNetwork* nn, int* Y, double** trainset);
+int getposmax(double* x);
+void predict(NeuralNetwork* nn, double* x, int y);
+void load_params(NeuralNetwork* nn);
+void save_params(NeuralNetwork* nn);

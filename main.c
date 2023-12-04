@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <dirent.h>
+#include "MNIST_for_C/mnist.h"
 
 #define NUM_CLASSES 10
 #define IMAGES_PER_CLASS 892
@@ -11,14 +12,79 @@
 #define TESTS 113
 
 
-int main() {
+int main(){
+    srand(time(NULL));
     NeuralNetwork* nn = malloc(sizeof(NeuralNetwork));
-    initialize_network(nn);
+    initialize_neuralnetwork(nn);
+    printf("Initialization done\n");
+
+    for(size_t i = 0; i < OUTPUTS; i++)
+        printf("%f\n", nn->output[i]);
+    printf("\n");
+
+    load_mnist();
+    printdigit(train_image[1]);
+    printf("Dataset done\n");
+    
+    /*forward_propagation(nn);
+    for(size_t i = 0; i < OUTPUTS; i++)
+        printf("%f\n", nn->output[i]);
+    printf("\n");
+
+    back_propagation(nn, train_label, 0);
+    for(size_t i = 0; i < OUTPUTS; i++)
+        printf("%f\n", nn->output[i]);
+    printf("\n");
+
+    update_params(nn);
+    for(size_t i = 0; i < OUTPUTS; i++)
+        printf("%f\n", nn->output[i]);
+    printf("\n");
+
+    forward_propagation(nn);
+    for(size_t i = 0; i < OUTPUTS; i++)
+        printf("%f\n", nn->output[i]);*/
+    
+    load_params(nn);
+
+    size_t accuracy = 0;
+    for(size_t i = 0; i < EPOCHS; i++){
+        
+        size_t batch_accuracy = 0;
+        for(size_t j = 0; j < SAMPLES; j++) {
+            nn->inputs = train_image[j];
+
+            //printdigit(train_image[j]);
+            forward_propagation(nn);
+
+            if (getposmax(nn->output) == train_label[j]){
+                accuracy++;
+                batch_accuracy++;
+            }
+
+            back_propagation(nn, train_label, j);
+            update_params(nn);
+
+            if (j % 100 == 0) {
+                double batch_accuracy_percent = (double)(batch_accuracy*100) / (j+1);
+                printf("Batch Accuracy after %zu samples in EPOCH %zu: %.2f%%\n", j + 1, i, batch_accuracy_percent);
+                printf("%zu / %zu\n", batch_accuracy, j + 1);
+                
+            }
+        } 
+        save_params(nn);
+        double epoch_accuracy = (double)accuracy / SAMPLES;
+        printf("Accuracy for EPOCH %zu: %f\n", i, epoch_accuracy);
+    }
+    
+    //gradient_descent(nn, train_label, train_image);
+
+    /*
 
     double** trainset = malloc(sizeof(double*) * TOTAL_IMAGES);
-    double targets[TOTAL_IMAGES];
+    int targets[TOTAL_IMAGES];
 
-    if (trainset == NULL) 
+    if (trainset == NULL)
         errx(EXIT_FAILURE, "Memory allocation failed for trainset\n");
 
     //Là je créé le trainset.
@@ -30,11 +96,15 @@ int main() {
         for (int j = 1; j <= IMAGES_PER_CLASS; j++) {
             char final[50];
             sprintf(final, "%s%zu_%d.png", path, i, j);
-            trainset[index] = path_to_input(final); 
+            trainset[index] = path_to_input(final);
             targets[index] = i;
             index++;
         }
     }
+    printf("Trainset done\n");
+    printf("Gradient descent done\n");
+
+
 
     double** testset = malloc(sizeof(double*) * 113);
     int targetstest[] = {
@@ -59,25 +129,9 @@ int main() {
         index++;
     }
 
-    /*for(size_t i = 0; i < TOTAL_IMAGES; i+=100){
-        printdigit(trainset[i]);
-    }*/
-
-    train(nn, trainset, targets, TOTAL_IMAGES);
+    for(size_t i = 0; i < 7; i++)
+        predict(nn, testset[i], targetstest[i]);*/
     
-
-    int correct_predictions = 0;
-    for (int i = 1; i <= TESTS; i++) {
-        int predicted = predict(nn, testset[i-1]);
-        if (predicted == targetstest[i-1]) {
-            correct_predictions++;
-        }
-        printf("Image %d => Pred = %d, True = %d\n", targetstest[i-1], predicted, targetstest[i-1]);
-    }
-
-    printf("Accuracy: %f\n", (double)correct_predictions / TESTS);
-    freeNeuralNetwork(nn);
-
     return 0;
 
 }
