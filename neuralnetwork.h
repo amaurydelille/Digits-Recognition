@@ -8,8 +8,8 @@
 #define INPUTS 784
 #define HIDDEN 16
 #define OUTPUTS 10
-#define LEARNING_RATE 0.1
-#define EPOCHS 500
+#define LEARNING_RATE 0.01
+#define EPOCHS 100
 #define SAMPLES 60000
 #define TOTAL_IMAGES 60000
 
@@ -30,6 +30,7 @@ typedef struct NeuralNetwork {
         double* db2;
 }NeuralNetwork;
 
+double randn();
 double random_weights();
 double reLu(double x);
 double relu_derivative(double x);
@@ -42,6 +43,7 @@ int* get_predictions(double* A2, int outputs, int samples);
 double get_accuracy(int* predictions, int* Y, int samples) ;
 void gradient_descent(NeuralNetwork* nn, int* Y, double** trainset);
 int getposmax(double* x);
-void predict(NeuralNetwork* nn, double* x, int y);
 void load_params(NeuralNetwork* nn);
 void save_params(NeuralNetwork* nn);
+void predict(NeuralNetwork* nn, double* image);
+double getmax(double* x);

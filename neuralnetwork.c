@@ -6,14 +6,39 @@
 #include "files.h"
 
 #define INPUTS 784
-#define HIDDEN 35
+#define HIDDEN 10
 #define OUTPUTS 10
-#define LEARNING_RATE 0.1
+#define LEARNING_RATE 0.01
 #define EPOCHS 100
 #define SAMPLES 60000
 
+double randn() {
+    double u1, u2, w, mult;
+    static double x1, x2;
+    static int call = 0;
+
+    if (call == 1) {
+        call = !call;
+        return x2;
+    }
+
+    do {
+        u1 = -1 + ((double) rand() / RAND_MAX) * 2;
+        u2 = -1 + ((double) rand() / RAND_MAX) * 2;
+        w = pow(u1, 2) + pow(u2, 2);
+    } while (w >= 1 || w == 0);
+
+    mult = sqrt((-2 * log(w)) / w);
+    x1 = u1 * mult;
+    x2 = u2 * mult;
+
+    call = !call;
+
+    return x1;
+}
+
 double random_weights(){
-    double r = (double)rand() / (double)RAND_MAX * 3.0;
+    double r = randn() * sqrt(2.0 / 784);
     return r;
 }
 
@@ -24,7 +49,6 @@ double sigmoid(double x) {
 double sigmoid_derivative(double x) {
     return x * (1.0 - x);
 }
-
 
 double reLu(double x){
     if (x < 0)
@@ -118,27 +142,23 @@ void back_propagation(NeuralNetwork* nn, int* Y, int i){
     int one_hot_Y[OUTPUTS] = {0};
     one_hot_Y[Y[i]] = 1;
 
-    // Calcul de dZ2
     for(size_t i = 0; i < OUTPUTS; i++)
         nn->dZ2[i] = nn->output[i] - one_hot_Y[i];
 
-    // Mise à jour de dW2 et db2
     for (size_t i = 0; i < OUTPUTS; i++) {
         for (size_t j = 0; j < HIDDEN; j++) {
-            nn->dW2[i][j] = nn->dZ2[i] * nn->hidden[j];
+            nn->dW2[i][j] = nn->dZ2[i] * nn->hidden[j] * 1/SAMPLES;
         }
-        nn->db2[i] = nn->dZ2[i];
+        nn->db2[i] = nn->dZ2[i] * 1/SAMPLES;
     }
 
-    // Calcul de dZ1
     for (size_t i = 0; i < HIDDEN; i++) {
         nn->dZ1[i] = 0;
         for (size_t j = 0; j < OUTPUTS; j++)
-            nn->dZ1[i] += nn->weights_2[j][i] * nn->dZ2[j];
+            nn->dZ1[i] += nn->weights_2[j][i] * nn->dZ2[j]; //maybe [j][i] instead of i j
         nn->dZ1[i] *= relu_derivative(nn->hidden[i]);
     }
 
-    // Mise à jour de dW1 et db1
     for (size_t i = 0; i < HIDDEN; i++) {
         for (size_t j = 0; j < INPUTS; j++) {
             nn->dW1[i][j] = nn->dZ1[i] * nn->inputs[j];
@@ -146,7 +166,6 @@ void back_propagation(NeuralNetwork* nn, int* Y, int i){
         nn->db1[i] = nn->dZ1[i];
     }
 }
-
 
 void update_params(NeuralNetwork* nn) {
     for (size_t i = 0; i < HIDDEN; i++) {
@@ -160,36 +179,6 @@ void update_params(NeuralNetwork* nn) {
             nn->weights_2[i][j] -= LEARNING_RATE * nn->dW2[i][j];
         nn->bias_2[i] -= LEARNING_RATE * nn->db2[i];
     }
-}
-
-int* get_predictions(double *A2, int outputs, int samples) {
-    int *predictions = malloc(samples * sizeof(int));
-    if (predictions == NULL) 
-        errx(EXIT_FAILURE, "malloc failed");
-
-    for (size_t i = 0; i < samples; i++) {
-        int max_idx = 0;
-        double max_val = A2[i * outputs];
-        for (size_t j = 1; j < outputs; j++) {
-            if (A2[i * outputs + j] > max_val) {
-                max_val = A2[i * outputs + j];
-                max_idx = j;
-            }
-        }
-        predictions[i] = max_idx;
-    }
-
-    return predictions;
-}
-
-double get_accuracy(int *predictions, int *Y, int samples) {
-    int correct = 0;
-    for (size_t i = 0; i < samples; i++) {
-        if (predictions[i] == Y[i]) {
-            correct++;
-        }
-    }
-    return (double)correct / samples;
 }
 
 void gradient_descent(NeuralNetwork* nn, int* Y, double** trainset){
@@ -223,16 +212,14 @@ int getposmax(double* x){
     return pos;
 }
 
-void predict(NeuralNetwork* nn, double* x, int y){
-    nn->inputs = x;
-    forward_propagation(nn);
+double getmax(double* x){
+    double max = x[0];
 
-    int pred = getposmax(nn->output);
-
-    for(size_t i = 0; i < OUTPUTS; i++)
-        printf("%f\n", nn->output[i]);
-
-    printf("Prediction : %d => True : %d\n", pred, y);
+    for(size_t i = 0; i < OUTPUTS; i++){
+        if (x[i] > max)
+            max = x[i];
+    }
+    return max;
 }
 
 void save_params(NeuralNetwork* nn) {
@@ -282,7 +269,7 @@ void save_params(NeuralNetwork* nn) {
     }
     fclose(file_bHO);
 
-    printf("Les paramètres ont été sauvegardés avec succès.\n");
+    //printf("Les paramètres ont été sauvegardés avec succès.\n");
 }
 
 
@@ -348,4 +335,13 @@ void load_params(NeuralNetwork* nn) {
     fclose(file_bHO);
 
     printf("Les paramètres ont été chargés avec succès.\n");
+}
+
+void predict(NeuralNetwork* nn, double* image){
+    nn->inputs = image;
+
+    forward_propagation(nn);
+    printf("Prediction : %d - %f\n", getposmax(nn->output), getmax(nn->output));
+    for(size_t i = 0; i< OUTPUTS; i++)
+        printf("%f\n", nn->output[i]);
 }
